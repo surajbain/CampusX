@@ -1,0 +1,65 @@
+# Prevent accidental Go module files at root
+/go.mod
+/go.sum
+# ============================================
+# Go / Backend
+# ============================================
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+backend/bin/
+backend/tmp/
+backend/coverage.out
+backend/coverage.html
+
+# ============================================
+# Node / Frontend
+# ============================================
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.env.local
+frontend/.env*.local
+*.tsbuildinfo
+next-env.d.ts
+
+# ============================================
+# Env
+# ============================================
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env.local
+
+# ============================================
+# IDE / OS
+# ============================================
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ============================================
+# Logs
+# ============================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================================
+# Coverage / Build
+# ============================================
+coverage.out
+coverage.html
+bin/
+tmp/
+
