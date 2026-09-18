@@ -138,3 +138,129 @@ export async function getAdminStats(): Promise<Record<string, number>> {
 }
 
 export type { User };
+
+// ============================================
+// EVENT MANAGEMENT (Admin)
+// ============================================
+
+export interface CreateEventInput {
+  title: string;
+  slug?: string;
+  description?: string;
+  category: "HACKATHON" | "CULTURAL" | "SPORTS" | "WORKSHOP" | "TECH_FEST" | "OTHER";
+  poster_url?: string;
+  venue?: string;
+  city?: string;
+  starts_at?: string;
+  ends_at?: string;
+  registration_opens?: string;
+  registration_closes?: string;
+  price_paise?: number;
+  capacity?: number;
+  allow_teams?: boolean;
+  team_size_min?: number;
+  team_size_max?: number;
+  prize_pool_paise?: number;
+  contact_email?: string;
+  whatsapp_link?: string;
+  rules?: string;
+  is_featured?: boolean;
+}
+
+export interface AdminEvent {
+  id: string;
+  college_id: string;
+  created_by?: string;
+  slug: string;
+  title: string;
+  description?: string;
+  category: string;
+  poster_url?: string;
+  venue?: string;
+  city?: string;
+  status: "DRAFT" | "PUBLISHED" | "ONGOING" | "COMPLETED" | "CANCELLED";
+  starts_at?: string;
+  ends_at?: string;
+  registration_opens?: string;
+  registration_closes?: string;
+  price_paise: number;
+  currency: string;
+  capacity?: number;
+  allow_teams: boolean;
+  team_size_min?: number;
+  team_size_max?: number;
+  prize_pool_paise: number;
+  contact_email?: string;
+  whatsapp_link?: string;
+  rules?: string;
+  is_featured: boolean;
+  college_name?: string;
+  college_slug?: string;
+  college_city?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ListEventsAdminResponse {
+  data: AdminEvent[];
+  meta: PaginationMeta;
+}
+
+// List events the current admin can manage
+export async function listAdminEvents(params: {
+  page?: number;
+  limit?: number;
+  status?: string;
+} = {}): Promise<ListEventsAdminResponse> {
+  return apiFetch<ListEventsAdminResponse>("/api/v1/events/my", {
+    params: params as Record<string, string | number>,
+  });
+}
+
+// Create event
+export async function createEvent(input: CreateEventInput): Promise<AdminEvent> {
+  const res = await apiFetch<AdminEvent>("/api/v1/events", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  return (res as unknown as { data: AdminEvent }).data;
+}
+
+// Update event
+export async function updateEvent(
+  id: string,
+  input: Partial<CreateEventInput>
+): Promise<AdminEvent> {
+  const res = await apiFetch<AdminEvent>(`/api/v1/events/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+  return (res as unknown as { data: AdminEvent }).data;
+}
+
+// Delete event
+export async function deleteEvent(id: string): Promise<void> {
+  await apiFetch(`/api/v1/events/${id}`, { method: "DELETE" });
+}
+
+// Publish event
+export async function publishEvent(id: string): Promise<AdminEvent> {
+  const res = await apiFetch<AdminEvent>(`/api/v1/events/${id}/publish`, {
+    method: "POST",
+  });
+  return (res as unknown as { data: AdminEvent }).data;
+}
+
+// Cancel event
+export async function cancelEvent(id: string): Promise<AdminEvent> {
+  const res = await apiFetch<AdminEvent>(`/api/v1/events/${id}/cancel`, {
+    method: "POST",
+  });
+  return (res as unknown as { data: AdminEvent }).data;
+}
+
+// Get single event
+export async function getAdminEvent(id: string): Promise<AdminEvent> {
+  const res = await apiFetch<AdminEvent>(`/api/v1/events/${id}`);
+  return (res as unknown as { data: AdminEvent }).data;
+}

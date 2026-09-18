@@ -27,7 +27,7 @@ type Payment struct {
 	Base
 	RegistrationID string          `gorm:"type:uuid;not null;index" json:"registration_id"`
 	UserID         string          `gorm:"type:uuid;not null;index" json:"user_id"`
-	EventID        string          `gorm:"type:uuid;not null" json:"event_id"`
+	EventID        string          `gorm:"type:uuid;not null;index" json:"event_id"`
 	Provider       PaymentProvider `gorm:"size:30;not null;default:'MOCK'" json:"provider"`
 
 	GatewayPaymentID *string `gorm:"size:120;uniqueIndex" json:"gateway_payment_id,omitempty"`
@@ -42,6 +42,9 @@ type Payment struct {
 	RawPayload datatypes.JSON `gorm:"type:jsonb" json:"-"`
 
 	VerifiedAt *time.Time `json:"verified_at,omitempty"`
+
+	// ---- Relations ----
+	Registration *Registration `gorm:"foreignKey:RegistrationID" json:"registration,omitempty"`
 }
 
 func (Payment) TableName() string { return "payments" }

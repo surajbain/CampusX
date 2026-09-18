@@ -11,21 +11,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/campusx/api/internal/audit"
-	"github.com/campusx/api/internal/auth"
-	"github.com/campusx/api/internal/college"
-	"github.com/campusx/api/internal/event"
-	"github.com/campusx/api/internal/health"
-	"github.com/campusx/api/internal/middleware"
 	"github.com/campusx/api/internal/migrations"
-	"github.com/campusx/api/pkg/apperror"
+	"github.com/campusx/api/internal/router"
 	"github.com/campusx/api/pkg/config"
 	"github.com/campusx/api/pkg/db"
 	"github.com/campusx/api/pkg/jwt"
 	"github.com/campusx/api/pkg/logger"
 	redisPkg "github.com/campusx/api/pkg/redis"
-	"github.com/campusx/api/pkg/response"
-	"github.com/campusx/api/pkg/session"
 )
 
 func main() {
@@ -51,14 +43,12 @@ func main() {
 	}
 	defer func() { _ = db.Close(gdb) }()
 
-	// ------- MIGRATIONS -------
 	if os.Getenv("RUN_MIGRATIONS") == "true" {
 		log.Info().Msg("running migrations")
 		if err := migrations.Run(ctx, gdb, &log); err != nil {
 			log.Fatal().Err(err).Msg("migrations failed")
 		}
 	}
-	// --------------------------
 
 	rdb, err := redisPkg.Connect(ctx, cfg.Redis)
 	if err != nil {
@@ -66,7 +56,6 @@ func main() {
 	}
 	defer func() { _ = redisPkg.Close(rdb) }()
 
-	// ------- AUTH WIRING -------
 	jwtIssuer := jwt.NewIssuer(jwt.Config{
 		AccessSecret:  cfg.JWT.AccessSecret,
 		RefreshSecret: cfg.JWT.RefreshSecret,
@@ -74,47 +63,18 @@ func main() {
 		RefreshTTL:    cfg.JWT.RefreshTTL,
 		Issuer:        cfg.JWT.Issuer,
 	})
-	sessionStore := session.NewStore(rdb)
-	auditLog := audit.NewLogger(gdb)
 
-	authRepo := auth.NewRepo(gdb)
-	authSvc := auth.NewService(authRepo, jwtIssuer, sessionStore, auditLog)
-	authHandler := auth.NewHandler(authSvc)
-
-	limiters := middleware.NewLimiters(rdb)
-	// ---------------------------
-
-	router := gin.New()
-	router.Use(middleware.RequestID())
-	router.Use(middleware.Logger())
-	router.Use(middleware.Recovery())
-	router.Use(middleware.CORS(cfg.HTTP.CORSOrigins))
-
-	health.NewHandler(gdb, rdb, cfg.App.Env).RegisterRoutes(router)
-
-	// ------- API v1 ROUTES -------
-	v1 := router.Group("/api/v1")
-	auth.RegisterRoutes(v1, authHandler, limiters, middleware.RequireAuth(jwtIssuer))
-	// -----------------------------
-
-	// ---- College management ----
-	collegeRepo := college.NewRepo(gdb)
-	collegeSvc := college.NewService(collegeRepo, auditLog)
-	collegeHandler := college.NewHandler(collegeSvc)
-	college.RegisterRoutes(v1, collegeHandler, middleware.RequireAuth(jwtIssuer))
-	router.NoRoute(func(c *gin.Context) {
-		response.Fail(c, apperror.NotFound("route not found"))
+	// Build router using shared function
+	routerEngine := router.Build(router.Options{
+		Config: cfg,
+		DB:     gdb,
+		Redis:  rdb,
+		JWT:    jwtIssuer,
 	})
-
-	// ---- Event management ----
-	eventRepo := event.NewRepo(gdb)
-	eventSvc := event.NewService(eventRepo, auditLog)
-	eventHandler := event.NewHandler(eventSvc)
-	event.RegisterRoutes(v1, eventHandler, middleware.RequireAuth(jwtIssuer))
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.HTTP.Port,
-		Handler:      router,
+		Handler:      routerEngine,
 		ReadTimeout:  cfg.HTTP.ReadTimeout,
 		WriteTimeout: cfg.HTTP.WriteTimeout,
 		IdleTimeout:  cfg.HTTP.IdleTimeout,
@@ -132,7 +92,6 @@ func main() {
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.HTTP.ShutdownTimeout)
 	defer cancel()
-
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Error().Err(err).Msg("graceful shutdown failed")
 	} else {

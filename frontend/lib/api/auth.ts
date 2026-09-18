@@ -1,4 +1,4 @@
-import { apiFetch, ApiClientError } from "./client";
+import { apiFetch } from "./client";
 
 export interface User {
   id: string;
@@ -32,25 +32,33 @@ export interface RegisterInput {
   college_id: string;
 }
 
+// apiFetch returns {data, meta} wrapper — unwrap .data
+function unwrap<T>(res: unknown): T {
+  return (res as { data: T }).data;
+}
+
 export async function login(input: LoginInput): Promise<AuthResponse> {
-  return apiFetch<AuthResponse>("/api/v1/auth/login", {
+  const res = await apiFetch<AuthResponse>("/api/v1/auth/login", {
     method: "POST",
     body: JSON.stringify(input),
   });
+  return unwrap<AuthResponse>(res);
 }
 
 export async function register(input: RegisterInput): Promise<AuthResponse> {
-  return apiFetch<AuthResponse>("/api/v1/auth/register", {
+  const res = await apiFetch<AuthResponse>("/api/v1/auth/register", {
     method: "POST",
     body: JSON.stringify(input),
   });
+  return unwrap<AuthResponse>(res);
 }
 
 export async function refresh(refreshToken: string): Promise<AuthResponse> {
-  return apiFetch<AuthResponse>("/api/v1/auth/refresh", {
+  const res = await apiFetch<AuthResponse>("/api/v1/auth/refresh", {
     method: "POST",
     body: JSON.stringify({ refresh_token: refreshToken }),
   });
+  return unwrap<AuthResponse>(res);
 }
 
 export async function logout(accessToken: string, refreshToken: string): Promise<void> {
@@ -62,7 +70,6 @@ export async function logout(accessToken: string, refreshToken: string): Promise
 }
 
 export async function me(accessToken: string): Promise<User> {
-  return apiFetch<User>("/api/v1/auth/me", { accessToken });
+  const res = await apiFetch<User>("/api/v1/auth/me", { accessToken });
+  return unwrap<User>(res);
 }
-
-export { ApiClientError };

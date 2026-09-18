@@ -25,6 +25,9 @@ type Ticket struct {
 	Status      TicketStatus `gorm:"size:20;not null;default:'ACTIVE';index" json:"status"`
 	IssuedAt    time.Time    `json:"issued_at"`
 	UsedAt      *time.Time   `json:"used_at,omitempty"`
+
+	// ---- Relations ----
+	Registration *Registration `gorm:"foreignKey:RegistrationID" json:"registration,omitempty"`
 }
 
 func (Ticket) TableName() string { return "tickets" }

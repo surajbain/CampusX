@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { formatPrice, formatDateRange, formatRelative, cn } from "@/lib/utils";
 import { categoryMeta } from "@/lib/constants";
 import type { Event } from "@/lib/api/types";
+import { RegisterButton } from "./register-button";
 
 const categoryVariantMap: Record<
   string,
@@ -169,9 +170,13 @@ export function EventDetailView({ event }: { event: Event }) {
                     )}
                   </div>
 
-                  <Button size="lg" className="w-full">
-                    Register now
-                  </Button>
+                 <RegisterButton
+                   eventId={event.id}
+                   pricePaise={event.price_paise}
+                   allowTeams={event.allow_teams}
+                   size="lg"
+                   className="w-full"
+                  />
 
                   {event.whatsapp_link && (
                     <a

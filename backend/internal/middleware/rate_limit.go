@@ -36,9 +36,9 @@ type Limiters struct {
 // NewLimiters returns production rate limiters.
 func NewLimiters(rdb *redis.Client) *Limiters {
 	return &Limiters{
-		AuthRegister: NewLimiter(rdb, RateLimitConfig{Name: "auth_register", Limit: 3, Window: time.Hour}),
-		AuthLogin:    NewLimiter(rdb, RateLimitConfig{Name: "auth_login", Limit: 5, Window: 15 * time.Minute}),
-		AuthRefresh:  NewLimiter(rdb, RateLimitConfig{Name: "auth_refresh", Limit: 20, Window: time.Hour}),
+		AuthRegister: NewLimiter(rdb, RateLimitConfig{Name: "auth_register", Limit: 100, Window: time.Hour}),
+		AuthLogin:    NewLimiter(rdb, RateLimitConfig{Name: "auth_login", Limit: 100, Window: 15 * time.Minute}),
+		AuthRefresh:  NewLimiter(rdb, RateLimitConfig{Name: "auth_refresh", Limit: 200, Window: time.Hour}),
 	}
 }
 

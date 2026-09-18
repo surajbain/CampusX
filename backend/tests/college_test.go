@@ -14,14 +14,10 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
-	"github.com/campusx/api/internal/audit"
-	"github.com/campusx/api/internal/auth"
-	"github.com/campusx/api/internal/college"
-	"github.com/campusx/api/internal/event"
-	"github.com/campusx/api/internal/middleware"
+	"github.com/campusx/api/internal/router"
+	"github.com/campusx/api/pkg/config"
 	"github.com/campusx/api/pkg/jwt"
 	redisPkg "github.com/campusx/api/pkg/redis"
-	"github.com/campusx/api/pkg/session"
 )
 
 type testApp struct {
@@ -62,32 +58,35 @@ func setupFullApp(t *testing.T) *testApp {
 		Issuer:        "campusx-test",
 	})
 
-	auditLog := audit.NewLogger(gdb)
+	// Minimal config for test
+	cfg := &config.Config{
+		App: config.AppConfig{
+			Name: "CampusX",
+			Env:  "test",
+		},
+		HTTP: config.HTTPConfig{
+			Port:        "8080",
+			CORSOrigins: []string{"http://localhost:3000"},
+		},
+		JWT: config.JWTConfig{
+			AccessSecret:  "test_access_secret_at_least_32_characters_long!!",
+			RefreshSecret: "test_refresh_secret_at_least_32_characters_long!!",
+			AccessTTL:     15 * time.Minute,
+			RefreshTTL:    1 * time.Hour,
+			Issuer:        "campusx-test",
+		},
+	}
 
-	// ---- Auth ----
-	authRepo := auth.NewRepo(gdb)
-	authSvc := auth.NewService(authRepo, issuer, session.NewStore(rdb), auditLog)
-	authHandler := auth.NewHandler(authSvc)
-	limiters := middleware.NewTestLimiters(rdb)
+	// Build router using shared function (same as production)
+	routerEngine := router.Build(router.Options{
+		Config:    cfg,
+		DB:        gdb,
+		Redis:     rdb,
+		JWT:       issuer,
+		UseTestRL: true, // no rate limits in tests
+	})
 
-	// ---- College ----
-	colRepo := college.NewRepo(gdb)
-	colSvc := college.NewService(colRepo, auditLog)
-	colHandler := college.NewHandler(colSvc)
-
-	// ---- Event ----
-	eventRepo := event.NewRepo(gdb)
-	eventSvc := event.NewService(eventRepo, auditLog)
-	eventHandler := event.NewHandler(eventSvc)
-
-	// ---- Router ----
-	r := gin.New()
-	v1 := r.Group("/api/v1")
-	auth.RegisterRoutes(v1, authHandler, limiters, middleware.RequireAuth(issuer))
-	college.RegisterRoutes(v1, colHandler, middleware.RequireAuth(issuer))
-	event.RegisterRoutes(v1, eventHandler, middleware.RequireAuth(issuer))
-
-	return &testApp{router: r, gdb: gdb, issuer: issuer}
+	return &testApp{router: routerEngine, gdb: gdb, issuer: issuer}
 }
 
 func redisCfg() (cfg struct {
